@@ -991,13 +991,13 @@ def generate_itermediate(iterable):
 x = random_initial_solution(num_schools, num_students, seed=0)
 
 
-# In[ ]:
+# In[36]:
 
 
 get_ipython().run_cell_magic('time', '', '\n# Iinitial solution for the frontier\nif PROBLEM_TYPE == "random":\n    x = min_cost_flow_solution(num_schools, num_students, priorities)\nelse:\n    x = random_initial_solution(num_schools, num_students, seed=0)\nfrontier = [(x.copy(), evaluate(x, grades, priorities))]\n\nstudent_inds = np.arange(num_students)\nmasks = [[True, True], \n         [True, False], \n         [False, True]]\n\niterations = list(range(1000))\ndef temperature(iteration, start_value=1):\n    return start_value*0.99**iteration\n\n# =============================================================================\nplt.figure(figsize=(FIGSIZE[0], FIGSIZE[1]))\ntempz = list(temperature(i) for i in iterations)\nplt.semilogx(iterations, tempz, label="Temperatures")\nplt.grid(True, ls="--", zorder=5, alpha=0.8)\nplt.xlabel(r"Iterasjoner")\nplt.ylabel(r"Temperatur")\nplt.tight_layout()\nplt.show()\n\nnp.random.seed(123)\nrandom.seed(123)\n\nfrontiers_per_iteration = []\n\nfor iteration_frontier in range(1, 34 + 1):\n    print(f"Frontier iteration {iteration_frontier}")\n    print(f"There are {len(frontier)} solutions in the frontier")\n    \n    paths = []\n\n    # For every solution in the frontier\n    for k, (x_frontier, objective_values) in enumerate(frontier):\n        print(f"{k+1}", end=" ")\n\n        # For every search diration\n        for seed, mask in enumerate(masks):\n            x = x_frontier.copy()\n            best_cost_priorities, best_cost_grades = objective_values\n            if iteration_frontier == 1:\n                path = [(x, objective_values)]\n            else:\n                path = []\n            for iteration in iterations:\n                \n                #np.random.seed(hash(str(iteration_frontier) + str(k) + str(seed)) % 10000)\n                j1, j2 = get_school_inds(x)\n                i1, i2 = get_student_inds(x, j1, j2, student_inds)\n\n                # Swap\n                x[i1, j1], x[i1, j2] = x[i1, j2], x[i1, j1]\n                x[i2, j1], x[i2, j2] = x[i2, j2], x[i2, j1]\n                cost_priorities, cost_grades = evaluate(x, grades, priorities) \n\n                dominates = domination((cost_priorities, cost_grades), \n                                       (best_cost_priorities, best_cost_grades),\n                                        mask=mask)\n\n                temp = temperature(iteration, start_value=1/iteration_frontier)\n                if dominates or (random.random() < temp):\n                    best_cost_priorities = cost_priorities\n                    best_cost_grades = cost_grades\n                    path.append((x.copy(), (best_cost_priorities, best_cost_grades)))\n                else:\n                    # Swap back\n                    x[i1, j1], x[i1, j2] = x[i1, j2], x[i1, j1]\n                    x[i2, j1], x[i2, j2] = x[i2, j2], x[i2, j1]\n                    assert np.all(np.sum(x, axis=0) == students_per_school)\n                    \n            paths.append(path)\n            \n        # Create an educational plot\n        if iteration_frontier == 1:\n            \n            # Add to frontier\n            for path in paths:\n                for x, objective in path:\n                    frontier = add_to_frontier(frontier, x, objective)\n            \n            frontier_points = sorted([o for (s, o) in frontier])\n\n            non_frontier = []\n            for path in paths:\n                for x, objective in path:\n                    if objective not in frontier_points:\n                        non_frontier.append(objective)\n            \n            plt.figure(figsize=(FIGSIZE[0]*1.6*0.9, FIGSIZE[1]*0.9))\n            # =============================================================================\n            plt.subplot(1, 2, 1)\n            plt.title(f"Søkeretninger")\n            labels = ["Segregering og prioriteter", \n                      "Prioriteter", \n                      "Segregering"]\n\n            for i, (path, mask) in enumerate(zip(paths, masks)):\n    \n                plt.plot([i for (_, (i, j)) in path], [j for (_, (i, j)) in path], \n                         color=COLORS[i], label=labels[i], alpha=0.8, zorder=9)\n                #plt.scatter([i for (_, (i, j)) in path[:1]], [j for (_, (i, j)) in path[:1]], \n                #            color=COLORS[i], zorder=9, edgecolor="k")\n                plt.scatter([i for (_, (i, j)) in path[-1:]], [j for (_, (i, j)) in path[-1:]], \n                            color=COLORS[i], zorder=99, edgecolor="k", s=20)\n\n            plt.legend(loc="best", edgecolor="k").set_zorder(99)\n            plt.grid(True, ls="--", zorder=5, alpha=0.8)\n            plt.xlabel("Kostnad av prioriteter (snitt per elev)")\n            plt.ylabel("Segregering")\n\n            # =============================================================================\n            plt.subplot(1, 2, 2)\n            plt.title(f"Løsninger funnet i søket")\n            \n            frontier_steps = list(generate_itermediate(frontier_points))\n            plt.plot([i for (i, j) in frontier_steps], \n                     [j for (i, j) in frontier_steps], "--", alpha=0.8,\n                     zorder=99)\n            \n            plt.scatter([i for (i, j) in frontier_points], \n                     [j for (i, j) in frontier_points], alpha=1, label="Ikke-dominerte løsninger",\n                       zorder=99, s=20)\n\n            plt.scatter([i for (i, j) in non_frontier], \n                        [j for (i, j) in non_frontier], alpha=0.2, color="k", s=10,\n                       label="Dominerte løsninger", zorder=9) \n\n            plt.xlabel("Kostnad av prioriteter (snitt per elev)")\n            plt.yticks(fontsize=0)\n            plt.legend(loc="best", edgecolor="k").set_zorder(99)\n            plt.grid(True, ls="--", zorder=5, alpha=0.8)\n            \n            plt.tight_layout()\n            #plt.savefig(os.path.join(save_dir, f"annealing_directions_{PROBLEM_TYPE}_{num_schools}.png"), dpi=300)\n            plt.show()\n            \n    # Add to frontier\n    for path in paths:\n        for x, objective in path:\n            frontier = add_to_frontier(frontier, x, objective)\n            \n    print(f"END; There are {len(frontier)} solutions in the frontier")\n    frontiers_per_iteration.append([j for (i, j) in frontier])\n        \n\n    # =================== CONVENIENCE PLOT ==================\n    frontier_points = sorted([o for (s, o) in frontier])\n\n    non_frontier = []\n    for path in paths:\n        for x, objective in path:\n            if objective not in frontier_points:\n                non_frontier.append(objective)\n\n    plt.figure(figsize=(FIGSIZE[0]*1.0, FIGSIZE[1]))\n    plt.title(f"Ikke-dominert front i iterasjon {iteration_frontier}")\n\n    solutions_step = list(generate_itermediate(frontier_points))\n    plt.plot([i for (i, j) in solutions_step], [j for (i, j) in solutions_step], "--",\n              alpha=0.8, zorder=20)\n    \n    #plt.plot([i for (i, j) in frontier_points], [j for (i, j) in frontier_points], alpha=0.8)\n    plt.scatter([i for (i, j) in frontier_points], [j for (i, j) in frontier_points], \n                alpha=1, zorder=20, label="Ikke-dominerte løsninger")\n    plt.scatter([i for (i, j) in non_frontier], [j for (i, j) in non_frontier], \n                alpha=0.2, color="k", s=15, zorder=10, label="Dominerte løsninger")\n    plt.xlabel("Kostnad av prioriteter (snitt per elev)")\n    plt.ylabel("Segregering")\n    plt.legend(loc="best", edgecolor="k").set_zorder(99)\n    plt.grid(True, ls="--", zorder=5, alpha=0.8)\n    plt.tight_layout()\n    if iteration_frontier in [i**2 for i in range(10)]:\n        pass\n        #plt.savefig(os.path.join(save_dir, f"annealing_efficient_{PROBLEM_TYPE}_{num_schools}_iter_{iteration_frontier}.png"), dpi=300)\n    plt.show()')
 
 
-# In[ ]:
+# In[37]:
 
 
 plt.figure(figsize=(FIGSIZE[0]*1.15, FIGSIZE[1]))
@@ -1019,7 +1019,7 @@ plt.savefig(os.path.join(save_dir, f"non_dom_set_{PROBLEM_TYPE}_{num_schools}.pn
 plt.show()
 
 
-# In[ ]:
+# In[38]:
 
 
 frontier_points = sorted([o for (s, o) in frontier])
@@ -1055,7 +1055,7 @@ if PROBLEM_TYPE != "random":
     plt.show()
 
 
-# In[ ]:
+# In[39]:
 
 
 frontier_points = sorted([o for (s, o) in frontier])
@@ -1106,7 +1106,7 @@ if PROBLEM_TYPE == "random":
     plt.show()
 
 
-# In[ ]:
+# In[40]:
 
 
 frontier_points = sorted([o for (s, o) in frontier])
@@ -1146,7 +1146,7 @@ if PROBLEM_TYPE == "random":
     plt.show()
 
 
-# In[ ]:
+# In[41]:
 
 
 for (x_on_frontier, objectives) in sorted(frontier, key=lambda t:t[1]):
@@ -1155,7 +1155,7 @@ for (x_on_frontier, objectives) in sorted(frontier, key=lambda t:t[1]):
         break
 
 
-# In[ ]:
+# In[42]:
 
 
 plt.figure(figsize=(FIGSIZE[0]*1.7 * 0.9, FIGSIZE[1]* 0.9))

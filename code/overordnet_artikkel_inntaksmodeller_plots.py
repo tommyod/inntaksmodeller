@@ -97,7 +97,7 @@ def multi_cost_func(x, cost_matrix, grades, capacities):
 
 # ## Solve the problem and plot solutions
 
-# In[ ]:
+# In[6]:
 
 
 
@@ -166,7 +166,7 @@ algorithm = PSSA(students,
                  verbose=1)
 
 # The .solve() method is implemented as a generator, run X iterations:
-for solutions in itertools.islice(algorithm.solve(), 100):
+for solutions in itertools.islice(algorithm.solve(), 10):
     pass
 
 x = [x_objectives[0] for (_, x_objectives) in solutions]
@@ -200,7 +200,7 @@ plt.show()
 
 # ## Weighted sampling
 
-# In[ ]:
+# In[7]:
 
 
 def generate_grade_averages(num_students, num_subjects, round_to=1, seed=2):
@@ -226,7 +226,7 @@ def rank_students(grades):
     return ans
 
 
-# In[ ]:
+# In[8]:
 
 
 num_students = 20
@@ -252,7 +252,6 @@ p = 15
 plt.title(f"Vekter noe avhengig av karakter")
 percentiles = rank_students(grad_avgs)
 percentiles_transformed = np.exp(percentiles * p)
-#plt.plot(percentiles_transformed)
 weights = np.log(np.random.rand(num_students)) /(percentiles_transformed)
 sorted_inds = np.argsort(weights)
 plt.bar(np.arange(num_students), grad_avgs[sorted_inds], alpha=0.9, zorder=10)
@@ -278,7 +277,7 @@ plt.savefig(os.path.join(save_dir, "vektet_loddtrekning.png"), dpi=200)
 plt.show()
 
 
-# In[ ]:
+# In[9]:
 
 
 num_students = 28
@@ -288,7 +287,6 @@ grad_avgs = generate_grade_averages(num_students, num_subjects)
 
 # =============================================================================
 plt.figure(figsize=(FIGSIZE[0]*0.7, FIGSIZE[1]*1.8))
-#plt.suptitle(f"Fordeling av studenter", y=1.1)
 
 plt.subplot(3, 1, 1)
 plt.title(f"Karakterbasert rangering")
@@ -306,7 +304,6 @@ p = 20
 plt.title(f"Loddtrekning sterkt avhengig av karakter")
 percentiles = rank_students(grad_avgs)
 percentiles_transformed = np.exp(percentiles * p)
-#plt.plot(percentiles_transformed)
 weights = np.log(np.random.rand(num_students)) /(percentiles_transformed)
 sorted_inds = np.argsort(weights)
 plt.bar(np.arange(num_students), grad_avgs[sorted_inds], alpha=0.9, zorder=10)
