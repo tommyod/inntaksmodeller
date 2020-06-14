@@ -100,6 +100,7 @@ def multi_cost_func(x, cost_matrix, grades, capacities):
 # In[6]:
 
 
+data_out = []
 
 
 plt.figure(figsize=(5, 3.5))
@@ -132,6 +133,8 @@ for seed in range(lotteries):
         plt.scatter([x_plt], [y_plt], color=COLORS[1], label=f"{lotteries} loddtrekninger", zorder=10, s=15)
     else:
         plt.scatter([x_plt], [y_plt], color=COLORS[1], s=15)
+        
+    data_out.append((f"Loddtrekning {seed + 1}", x_plt, y_plt))
     
     
     original_grades = [e.grade_avg for e in students]
@@ -151,6 +154,7 @@ capacities = np.array([s.capacity for s in schools])
 
 (x_plt, y_plt) = multi_cost_func(x, cost_matrix, grades, capacities)
 plt.scatter([x_plt], [y_plt], color=COLORS[3], label="Karakterbasert modell", zorder=10, s=50)
+data_out.append((f"Karakterbasert modell", x_plt, y_plt))
 
 
 # ========================================
@@ -166,13 +170,15 @@ algorithm = PSSA(students,
                  verbose=1)
 
 # The .solve() method is implemented as a generator, run X iterations:
-for solutions in itertools.islice(algorithm.solve(), 10):
+for solutions in itertools.islice(algorithm.solve(), 100):
     pass
 
 x = [x_objectives[0] for (_, x_objectives) in solutions]
 y = [x_objectives[1] for (_, x_objectives) in solutions]
 
 plt.scatter(x, y, label="Optimeringsmodell", zorder=12, s=15, color=COLORS[0])
+for x_i, y_i in zip(x, y):
+    data_out.append((f"Optimeringsmodell", x_i, y_i))
 
 # Area dominated by solutions
 frontier_steps = list(generate_itermediate([x_objectives for (_, x_objectives) in solutions]))
@@ -198,9 +204,19 @@ plt.savefig(os.path.join(save_dir, f"sammenligning_modeller.pdf"))
 plt.show()
 
 
+# In[7]:
+
+
+# Save to excel
+import pandas as pd
+df_out = pd.DataFrame(data_out, columns=["modell", "innvilget_onske_snitt_elev", "segregering"])
+df_out.to_excel("../excel/sammenligning_av_modeller.xlsx", index=False)
+df_out
+
+
 # ## Weighted sampling
 
-# In[7]:
+# In[8]:
 
 
 def generate_grade_averages(num_students, num_subjects, round_to=1, seed=2):
@@ -226,13 +242,16 @@ def rank_students(grades):
     return ans
 
 
-# In[8]:
+# In[9]:
 
 
 num_students = 20
 num_subjects = 20
 
 grad_avgs = generate_grade_averages(num_students, num_subjects)
+
+
+data_out = []
 
 # =============================================================================
 plt.figure(figsize=(FIGSIZE[0]*1.65, FIGSIZE[1]*0.8))
@@ -245,6 +264,9 @@ plt.xticks([], [])
 plt.grid(True, ls="--", zorder=5, alpha=0.8)
 plt.xlabel(r"$\leftarrow$Lav prioritet" + r" "*12 + r"Høy prioritet $\rightarrow$")
 plt.ylabel(r"Snittkarakter")
+
+for i, grad in enumerate(grad_avgs, 1):
+    data_out.append(("Vekter sterkt avhengig av karakter", f"elev {i}", grad))
 
 # =============================================================================
 plt.subplot(1, 3, 2)
@@ -259,6 +281,9 @@ plt.xticks([], [])
 plt.grid(True, ls="--", zorder=5, alpha=0.8)
 plt.xlabel(r"$\leftarrow$Lav prioritet" + r" "*12 + r"Høy prioritet $\rightarrow$")
 
+for i, grad in enumerate(grad_avgs[sorted_inds], 1):
+    data_out.append(("Vekter noe avhengig av karakter", f"elev {i}", grad))
+
 # =============================================================================
 plt.subplot(1, 3, 3)
 p = 1
@@ -272,18 +297,28 @@ plt.xticks([], [])
 plt.grid(True, ls="--", zorder=5, alpha=0.8)
 plt.xlabel(r"$\leftarrow$Lav prioritet" + r" "*12 + r"Høy prioritet $\rightarrow$")
 
+for i, grad in enumerate(grad_avgs[sorted_inds], 1):
+    data_out.append(("Vekter svakt avhengig av karakter", f"elev {i}", grad))
+
 plt.tight_layout()
 plt.savefig(os.path.join(save_dir, "vektet_loddtrekning.png"), dpi=200)
 plt.show()
 
 
-# In[9]:
+# In[ ]:
+
+
+
+
+
+# In[10]:
 
 
 num_students = 28
 num_subjects = 20
 
 grad_avgs = generate_grade_averages(num_students, num_subjects)
+data_out = []
 
 # =============================================================================
 plt.figure(figsize=(FIGSIZE[0]*0.7, FIGSIZE[1]*1.8))
@@ -297,6 +332,9 @@ plt.yticks(np.arange(1, 7))
 plt.grid(True, ls="--", zorder=5, alpha=0.8)
 plt.xlabel(r"$\leftarrow$Lav rangering" + r" "*12 + r"Høy rangering $\rightarrow$")
 plt.ylabel("Karakterer")
+
+for i, grad in enumerate(grad_avgs, 1):
+    data_out.append(("Karakterbasert rangering", i, grad))
 
 # =============================================================================
 plt.subplot(3, 1, 2)
@@ -312,6 +350,9 @@ plt.yticks(np.arange(1, 7))
 plt.grid(True, ls="--", zorder=5, alpha=0.8)
 plt.xlabel(r"$\leftarrow$Lav rangering" + r" "*12 + r"Høy rangering $\rightarrow$")
 plt.ylabel("Karakterer")
+
+for i, grad in enumerate(grad_avgs[sorted_inds], 1):
+    data_out.append(("Loddtrekning sterkt avhengig av karakter", i, grad))
 
 # =============================================================================
 plt.subplot(3, 1, 3)
@@ -329,8 +370,21 @@ plt.grid(True, ls="--", zorder=5, alpha=0.8)
 plt.xlabel(r"$\leftarrow$Lav rangering" + r" "*12 + r"Høy rangering $\rightarrow$")
 plt.ylabel("Karakterer")
 
+for i, grad in enumerate(grad_avgs[sorted_inds], 1):
+    data_out.append(("Loddtrekning svakt avhengig av karakter", i, grad))
+
 plt.tight_layout()
 plt.savefig(os.path.join(save_dir, "vektet_loddtrekning.png"), dpi=200)
 plt.savefig(os.path.join(save_dir, "vektet_loddtrekning.pdf"), dpi=200)
 plt.show()
+
+
+# In[11]:
+
+
+# Save to excel
+import pandas as pd
+df_out = pd.DataFrame(data_out, columns=["rangering", "elevnummer (x)", "karakterer (y)"])
+df_out.to_excel("../excel/loddtrekning.xlsx", index=False)
+df_out
 
